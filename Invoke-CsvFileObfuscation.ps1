@@ -4,7 +4,7 @@
         Invokes obfuscation on a csv file
 
     .DESCRIPTION
-        Invokes obfuscation on a csv file
+        Invokes obfuscation on a csv file to obfuscate it
 
     .PARAMETER Fullname
         Full path of the csv file to obfuscate

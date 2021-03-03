@@ -2,6 +2,7 @@
     <#
     .Synopsis
        Shows extensive information about the current user
+       
 
     .DESCRIPTION
        Get-WhoAmI is intended to be an extended equivalent to the cmd tool whoami.exe. There are nearly the same parameters but much more output.

@@ -41,7 +41,10 @@
     Begin {
         $queryScriptBlock = [ScriptBlock] {
             param (
+                [string[]]
                 $computer = $env:COMPUTERNAME,
+
+                [System.Management.Automation.PSCredential]
                 $Credential
             )
 

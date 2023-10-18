@@ -13,8 +13,10 @@
         Encoding of the input string. Default is UTF8
 
     .NOTES
-        Author: Andreas Bellstedt
-        DateCreated: 2023-10-16
+        AUTHOR: Andreas Bellstedt
+        VERSION: 1.0.0
+        DATE: 2023-10-16
+        KEYWORDS: Encode, Decode, Text, Transformation, Algorith, Base64
 
     .LINK
         https://github.com/AndiBellstedt/Helper-Functions

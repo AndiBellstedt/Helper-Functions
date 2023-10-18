@@ -22,12 +22,12 @@
         https://github.com/AndiBellstedt/Helper-Functions
 
     .EXAMPLE
-        ConvertFrom-Base64String -InputObject "Q29udmVydEZyb20tQmFzZTY0U3RyaW5n"
+        PS C:\> ConvertFrom-Base64String -InputObject "Q29udmVydEZyb20tQmFzZTY0U3RyaW5n"
 
         Converts the string "Q29udmVydEZyb20tQmFzZTY0U3RyaW5n" to "ConvertFrom-Base64String"
 
     .EXAMPLE
-        "Q29udmVydEZyb20tQmFzZTY0U3RyaW5n" | ConvertFrom-Base64String -encoding UTF8
+        PS C:\> "Q29udmVydEZyb20tQmFzZTY0U3RyaW5n" | ConvertFrom-Base64String -encoding UTF8
 
         Converts the string "Q29udmVydEZyb20tQmFzZTY0U3RyaW5n" to "ConvertFrom-Base64String"
 

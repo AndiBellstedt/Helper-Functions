@@ -1,94 +1,96 @@
 ﻿function Get-WhoAmI {
     <#
     .Synopsis
-       Shows extensive information about the current user
-       
+        Shows extensive information about the current user
+
 
     .DESCRIPTION
-       Get-WhoAmI is intended to be an extended equivalent to the cmd tool whoami.exe. There are nearly the same parameters but much more output.
+        Get-WhoAmI is intended to be an extended equivalent to the cmd tool whoami.exe. There are nearly the same parameters but much more output.
 
     .NOTES
-       Version:     1.1.0.0
-       Author:      Andreas Bellstedt
-       History:     28.05.2017 - First Version
+        Version:     1.1.0.0
+        Author:      Andreas Bellstedt
+        History:     28.05.2017 - First Version
                     30.05.2017 - Apply coding best practice. changing aliases to cmdlets
                     09.07.2017 - Change privilege part. Removing the call of whoami.exe and replace it with "powershell-only-solution" adopted from PSGallery module "PoshPrivilege"
 
     .LINK
-       https://github.com/AndiBellstedt/
+        https://github.com/AndiBellstedt/
 
     .EXAMPLE
-       Get-WhoAmI
-       This displays only user information.
+        Get-WhoAmI
+        This displays only user information.
 
     .EXAMPLE
-       Get-WhoAmI -User
-       Same as calling the cmdlet without parameter user... this displays only user information.
+        Get-WhoAmI -User
+        Same as calling the cmdlet without parameter user... this displays only user information.
 
     .EXAMPLE
-       Get-WhoAmI -Groups | Out-GridView
-       Display extensive 
+        Get-WhoAmI -Groups | Out-GridView
+        Display extensive
 
     .EXAMPLE
-       Get-WhoAmI -Privileges | Format-Table
-       Display the users privileges.
+        Get-WhoAmI -Privileges | Format-Table
+        Display the users privileges.
 
     .EXAMPLE
-       Get-WhoAmI -All
-       Comprehensive informations about the current user as object with deep hierarchy of objects
+        Get-WhoAmI -All
+        Comprehensive informations about the current user as object with deep hierarchy of objects
 
     #>
-    [CmdletBinding(DefaultParameterSetName='User',
-                   SupportsShouldProcess=$false,
-                   PositionalBinding=$true,
-                   ConfirmImpact='Low')]
+    [CmdletBinding(
+        DefaultParameterSetName = 'User',
+        SupportsShouldProcess = $false,
+        PositionalBinding = $true,
+        ConfirmImpact = 'Low'
+    )]
     [Alias("WhoAmI")]
     Param(
         #Only display user information
-        [Parameter(ParameterSetName='User')]
+        [Parameter(ParameterSetName = 'User')]
         [Alias("Usr")]
-            [Switch]$User,
+        [Switch]$User,
 
         #Only display groups information
-        [Parameter(ParameterSetName='Groups')]
+        [Parameter(ParameterSetName = 'Groups')]
         [Alias("Grp")]
-            [Switch]$Groups,
+        [Switch]$Groups,
 
         #Only privileges of the user
-        [Parameter(ParameterSetName='Privileges')]
+        [Parameter(ParameterSetName = 'Privileges')]
         [Alias("Priv")]
-            [Switch]$Privileges,
+        [Switch]$Privileges,
 
         #Only privileges of the user
-        [Parameter(ParameterSetName='All')]
+        [Parameter(ParameterSetName = 'All')]
         [Alias("Everthing")]
-            [Switch]$All
+        [Switch]$All
     )
 
-    
+
     $CurrentUserIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
     #$LogonId = [System.Security.Principal.SecurityIdentifier]::new((whoami.exe /LOGONID))
     switch ($PsCmdlet.ParameterSetName) {
-        { $_ -like 'User' -or $_ -like 'Groups' -or $_ -like 'All' } { 
+        { $_ -like 'User' -or $_ -like 'Groups' -or $_ -like 'All' } {
             Add-Type -AssemblyName System.DirectoryServices.AccountManagement
             $CurrentUserAccount = [System.DirectoryServices.AccountManagement.UserPrincipal]::Current
         }
 
         { $_ -like 'Groups' -or $_ -like 'All' } {
-            $GroupsFromUserIdentity = foreach ($Group in $CurrentUserIdentity.Groups) { 
+            $GroupsFromUserIdentity = foreach ($Group in $CurrentUserIdentity.Groups) {
                 try {
-                    $GroupFromUserIdentityName = $Group.Translate([System.Security.Principal.NTAccount]).Value            
+                    $GroupFromUserIdentityName = $Group.Translate([System.Security.Principal.NTAccount]).Value
                 } catch {
                     $GroupFromUserIdentityName = ""
                 }
-                
-                if($Group.AccountDomainSid) { 
-                    $SearchContext = [System.DirectoryServices.AccountManagement.ContextType]::Domain 
-                } else { 
-                    $SearchContext = [System.DirectoryServices.AccountManagement.ContextType]::Machine 
+
+                if ($Group.AccountDomainSid) {
+                    $SearchContext = [System.DirectoryServices.AccountManagement.ContextType]::Domain
+                } else {
+                    $SearchContext = [System.DirectoryServices.AccountManagement.ContextType]::Machine
                 }
 
-                if($GroupFromUserIdentityName ) {
+                if ($GroupFromUserIdentityName ) {
                     $GroupFromUserIdentity = [System.DirectoryServices.AccountManagement.GroupPrincipal]::FindByIdentity($SearchContext, $GroupFromUserIdentityName)
                 } else {
                     $GroupFromUserIdentity = [System.DirectoryServices.AccountManagement.GroupPrincipal]::new($SearchContext, "unknown SID $($Group.Value)")
@@ -100,9 +102,9 @@
             Add-Member -InputObject $CurrentUserAccount -MemberType NoteProperty -Name GroupsAuthorization -Value $CurrentUserAccount.GetAuthorizationGroups() -Force -ErrorAction Continue
         }
 
-        { $_ -like 'Privileges' -or $_ -like 'All' } { 
+        { $_ -like 'Privileges' -or $_ -like 'All' } {
             #$CurrentUserPrivileges = whoami.exe /priv /FO CSV | ConvertFrom-Csv
-            
+
             #this part is taken from the psgallery module "PoshPrivilege" written bei Boe Prox
             # https://github.com/proxb/PoshPrivilege
             # https://www.powershellgallery.com/packages/PoshPrivilege
@@ -134,73 +136,73 @@
             #endregion LSA_AccessPolicy
             #region Privileges
             $EnumBuilder = $ModuleBuilder.DefineEnum('Privileges', 'Public', [uint32])
-            [void]$EnumBuilder.DefineLiteral('SeAssignPrimaryTokenPrivilege',[uint32] 0x00000000)
-            [void]$EnumBuilder.DefineLiteral('SeAuditPrivilege',[uint32] 0x00000001)
-            [void]$EnumBuilder.DefineLiteral('SeBackupPrivilege',[uint32] 0x00000002)
-            [void]$EnumBuilder.DefineLiteral('SeBatchLogonRight',[uint32] 0x00000003)
-            [void]$EnumBuilder.DefineLiteral('SeChangeNotifyPrivilege',[uint32] 0x00000004)
-            [void]$EnumBuilder.DefineLiteral('SeCreateGlobalPrivilege',[uint32] 0x00000005)
-            [void]$EnumBuilder.DefineLiteral('SeCreatePagefilePrivilege',[uint32] 0x00000006)
-            [void]$EnumBuilder.DefineLiteral('SeCreatePermanentPrivilege',[uint32] 0x00000007)
-            [void]$EnumBuilder.DefineLiteral('SeCreateSymbolicLinkPrivilege',[uint32] 0x00000008)
-            [void]$EnumBuilder.DefineLiteral('SeCreateTokenPrivilege',[uint32] 0x00000009)
-            [void]$EnumBuilder.DefineLiteral('SeDebugPrivilege',[uint32] 0x0000000a)
-            [void]$EnumBuilder.DefineLiteral('SeImpersonatePrivilege',[uint32] 0x0000000b)
-            [void]$EnumBuilder.DefineLiteral('SeIncreaseBasePriorityPrivilege',[uint32] 0x0000000c)
-            [void]$EnumBuilder.DefineLiteral('SeIncreaseQuotaPrivilege',[uint32] 0x0000000d)
-            [void]$EnumBuilder.DefineLiteral('SeInteractiveLogonRight',[uint32] 0x0000000e)
-            [void]$EnumBuilder.DefineLiteral('SeLoadDriverPrivilege',[uint32] 0x0000000f)
-            [void]$EnumBuilder.DefineLiteral('SeLockMemoryPrivilege',[uint32] 0x00000010)
-            [void]$EnumBuilder.DefineLiteral('SeMachineAccountPrivilege',[uint32] 0x00000011)
-            [void]$EnumBuilder.DefineLiteral('SeManageVolumePrivilege',[uint32] 0x00000012)
-            [void]$EnumBuilder.DefineLiteral('SeNetworkLogonRight',[uint32] 0x00000013)
-            [void]$EnumBuilder.DefineLiteral('SeProfileSingleProcessPrivilege',[uint32] 0x00000014)
-            [void]$EnumBuilder.DefineLiteral('SeRemoteInteractiveLogonRight',[uint32] 0x00000015)
-            [void]$EnumBuilder.DefineLiteral('SeRemoteShutdownPrivilege',[uint32] 0x00000016)
-            [void]$EnumBuilder.DefineLiteral('SeRestorePrivilege',[uint32] 0x00000017)
-            [void]$EnumBuilder.DefineLiteral('SeSecurityPrivilege',[uint32] 0x00000018)
-            [void]$EnumBuilder.DefineLiteral('SeServiceLogonRight',[uint32] 0x00000019)
-            [void]$EnumBuilder.DefineLiteral('SeShutdownPrivilege',[uint32] 0x0000001a)
-            [void]$EnumBuilder.DefineLiteral('SeSystemEnvironmentPrivilege',[uint32] 0x0000001b)
-            [void]$EnumBuilder.DefineLiteral('SeSystemProfilePrivilege',[uint32] 0x0000001c)
-            [void]$EnumBuilder.DefineLiteral('SeSystemtimePrivilege',[uint32] 0x0000001d)
-            [void]$EnumBuilder.DefineLiteral('SeTakeOwnershipPrivilege',[uint32] 0x0000001e)
-            [void]$EnumBuilder.DefineLiteral('SeTcbPrivilege',[uint32] 0x0000001f)
-            [void]$EnumBuilder.DefineLiteral('SeTimeZonePrivilege',[uint32] 0x00000020)
-            [void]$EnumBuilder.DefineLiteral('SeUndockPrivilege',[uint32] 0x00000021)
-            [void]$EnumBuilder.DefineLiteral('SeDenyNetworkLogonRight',[uint32] 0x00000022)
-            [void]$EnumBuilder.DefineLiteral('SeDenyBatchLogonRight',[uint32] 0x00000023)
-            [void]$EnumBuilder.DefineLiteral('SeDenyServiceLogonRight',[uint32] 0x00000024)
-            [void]$EnumBuilder.DefineLiteral('SeDenyInteractiveLogonRight',[uint32] 0x00000025)
-            [void]$EnumBuilder.DefineLiteral('SeSyncAgentPrivilege',[uint32] 0x00000026)
-            [void]$EnumBuilder.DefineLiteral('SeEnableDelegationPrivilege',[uint32] 0x00000027)
-            [void]$EnumBuilder.DefineLiteral('SeDenyRemoteInteractiveLogonRight',[uint32] 0x00000028)
-            [void]$EnumBuilder.DefineLiteral('SeTrustedCredManAccessPrivilege',[uint32] 0x00000029)
-            [void]$EnumBuilder.DefineLiteral('SeIncreaseWorkingSetPrivilege',[uint32] 0x0000002a)
+            [void]$EnumBuilder.DefineLiteral('SeAssignPrimaryTokenPrivilege', [uint32] 0x00000000)
+            [void]$EnumBuilder.DefineLiteral('SeAuditPrivilege', [uint32] 0x00000001)
+            [void]$EnumBuilder.DefineLiteral('SeBackupPrivilege', [uint32] 0x00000002)
+            [void]$EnumBuilder.DefineLiteral('SeBatchLogonRight', [uint32] 0x00000003)
+            [void]$EnumBuilder.DefineLiteral('SeChangeNotifyPrivilege', [uint32] 0x00000004)
+            [void]$EnumBuilder.DefineLiteral('SeCreateGlobalPrivilege', [uint32] 0x00000005)
+            [void]$EnumBuilder.DefineLiteral('SeCreatePagefilePrivilege', [uint32] 0x00000006)
+            [void]$EnumBuilder.DefineLiteral('SeCreatePermanentPrivilege', [uint32] 0x00000007)
+            [void]$EnumBuilder.DefineLiteral('SeCreateSymbolicLinkPrivilege', [uint32] 0x00000008)
+            [void]$EnumBuilder.DefineLiteral('SeCreateTokenPrivilege', [uint32] 0x00000009)
+            [void]$EnumBuilder.DefineLiteral('SeDebugPrivilege', [uint32] 0x0000000a)
+            [void]$EnumBuilder.DefineLiteral('SeImpersonatePrivilege', [uint32] 0x0000000b)
+            [void]$EnumBuilder.DefineLiteral('SeIncreaseBasePriorityPrivilege', [uint32] 0x0000000c)
+            [void]$EnumBuilder.DefineLiteral('SeIncreaseQuotaPrivilege', [uint32] 0x0000000d)
+            [void]$EnumBuilder.DefineLiteral('SeInteractiveLogonRight', [uint32] 0x0000000e)
+            [void]$EnumBuilder.DefineLiteral('SeLoadDriverPrivilege', [uint32] 0x0000000f)
+            [void]$EnumBuilder.DefineLiteral('SeLockMemoryPrivilege', [uint32] 0x00000010)
+            [void]$EnumBuilder.DefineLiteral('SeMachineAccountPrivilege', [uint32] 0x00000011)
+            [void]$EnumBuilder.DefineLiteral('SeManageVolumePrivilege', [uint32] 0x00000012)
+            [void]$EnumBuilder.DefineLiteral('SeNetworkLogonRight', [uint32] 0x00000013)
+            [void]$EnumBuilder.DefineLiteral('SeProfileSingleProcessPrivilege', [uint32] 0x00000014)
+            [void]$EnumBuilder.DefineLiteral('SeRemoteInteractiveLogonRight', [uint32] 0x00000015)
+            [void]$EnumBuilder.DefineLiteral('SeRemoteShutdownPrivilege', [uint32] 0x00000016)
+            [void]$EnumBuilder.DefineLiteral('SeRestorePrivilege', [uint32] 0x00000017)
+            [void]$EnumBuilder.DefineLiteral('SeSecurityPrivilege', [uint32] 0x00000018)
+            [void]$EnumBuilder.DefineLiteral('SeServiceLogonRight', [uint32] 0x00000019)
+            [void]$EnumBuilder.DefineLiteral('SeShutdownPrivilege', [uint32] 0x0000001a)
+            [void]$EnumBuilder.DefineLiteral('SeSystemEnvironmentPrivilege', [uint32] 0x0000001b)
+            [void]$EnumBuilder.DefineLiteral('SeSystemProfilePrivilege', [uint32] 0x0000001c)
+            [void]$EnumBuilder.DefineLiteral('SeSystemtimePrivilege', [uint32] 0x0000001d)
+            [void]$EnumBuilder.DefineLiteral('SeTakeOwnershipPrivilege', [uint32] 0x0000001e)
+            [void]$EnumBuilder.DefineLiteral('SeTcbPrivilege', [uint32] 0x0000001f)
+            [void]$EnumBuilder.DefineLiteral('SeTimeZonePrivilege', [uint32] 0x00000020)
+            [void]$EnumBuilder.DefineLiteral('SeUndockPrivilege', [uint32] 0x00000021)
+            [void]$EnumBuilder.DefineLiteral('SeDenyNetworkLogonRight', [uint32] 0x00000022)
+            [void]$EnumBuilder.DefineLiteral('SeDenyBatchLogonRight', [uint32] 0x00000023)
+            [void]$EnumBuilder.DefineLiteral('SeDenyServiceLogonRight', [uint32] 0x00000024)
+            [void]$EnumBuilder.DefineLiteral('SeDenyInteractiveLogonRight', [uint32] 0x00000025)
+            [void]$EnumBuilder.DefineLiteral('SeSyncAgentPrivilege', [uint32] 0x00000026)
+            [void]$EnumBuilder.DefineLiteral('SeEnableDelegationPrivilege', [uint32] 0x00000027)
+            [void]$EnumBuilder.DefineLiteral('SeDenyRemoteInteractiveLogonRight', [uint32] 0x00000028)
+            [void]$EnumBuilder.DefineLiteral('SeTrustedCredManAccessPrivilege', [uint32] 0x00000029)
+            [void]$EnumBuilder.DefineLiteral('SeIncreaseWorkingSetPrivilege', [uint32] 0x0000002a)
             [void]$EnumBuilder.CreateType()
             #endregion Privileges
             #region TOKEN_INFORMATION_CLASS
             $EnumBuilder = $ModuleBuilder.DefineEnum('TOKEN_INFORMATION_CLASS', 'Public', [uint32])
-            [void]$EnumBuilder.DefineLiteral('TokenUser ',[uint32] 0x00000001)
-            [void]$EnumBuilder.DefineLiteral('TokenGroups',[uint32] 0x00000002)
-            [void]$EnumBuilder.DefineLiteral('TokenPrivileges',[uint32] 0x00000003)
-            [void]$EnumBuilder.DefineLiteral('TokenOwner',[uint32] 0x00000004)
-            [void]$EnumBuilder.DefineLiteral('TokenPrimaryGroup',[uint32] 0x00000005)
-            [void]$EnumBuilder.DefineLiteral('TokenDefaultDacl',[uint32] 0x00000006)
-            [void]$EnumBuilder.DefineLiteral('TokenSource',[uint32] 0x00000007)
-            [void]$EnumBuilder.DefineLiteral('TokenType',[uint32] 0x00000008)
-            [void]$EnumBuilder.DefineLiteral('TokenImpersonationLevel',[uint32] 0x00000009)
-            [void]$EnumBuilder.DefineLiteral('TokenStatistics',[uint32] 0x0000000a)
-            [void]$EnumBuilder.DefineLiteral('TokenRestrictedSids',[uint32] 0x0000000b)
-            [void]$EnumBuilder.DefineLiteral('TokenSessionId',[uint32] 0x0000000c)
-            [void]$EnumBuilder.DefineLiteral('TokenGroupsAndPrivileges',[uint32] 0x0000000d)
-            [void]$EnumBuilder.DefineLiteral('TokenSessionReference',[uint32] 0x0000000e)
-            [void]$EnumBuilder.DefineLiteral('TokenSandBoxInert',[uint32] 0x0000000f)
-            [void]$EnumBuilder.DefineLiteral('TokenAuditPolicy',[uint32] 0x00000010)
-            [void]$EnumBuilder.DefineLiteral('TokenOrigin',[uint32] 0x00000011)
+            [void]$EnumBuilder.DefineLiteral('TokenUser ', [uint32] 0x00000001)
+            [void]$EnumBuilder.DefineLiteral('TokenGroups', [uint32] 0x00000002)
+            [void]$EnumBuilder.DefineLiteral('TokenPrivileges', [uint32] 0x00000003)
+            [void]$EnumBuilder.DefineLiteral('TokenOwner', [uint32] 0x00000004)
+            [void]$EnumBuilder.DefineLiteral('TokenPrimaryGroup', [uint32] 0x00000005)
+            [void]$EnumBuilder.DefineLiteral('TokenDefaultDacl', [uint32] 0x00000006)
+            [void]$EnumBuilder.DefineLiteral('TokenSource', [uint32] 0x00000007)
+            [void]$EnumBuilder.DefineLiteral('TokenType', [uint32] 0x00000008)
+            [void]$EnumBuilder.DefineLiteral('TokenImpersonationLevel', [uint32] 0x00000009)
+            [void]$EnumBuilder.DefineLiteral('TokenStatistics', [uint32] 0x0000000a)
+            [void]$EnumBuilder.DefineLiteral('TokenRestrictedSids', [uint32] 0x0000000b)
+            [void]$EnumBuilder.DefineLiteral('TokenSessionId', [uint32] 0x0000000c)
+            [void]$EnumBuilder.DefineLiteral('TokenGroupsAndPrivileges', [uint32] 0x0000000d)
+            [void]$EnumBuilder.DefineLiteral('TokenSessionReference', [uint32] 0x0000000e)
+            [void]$EnumBuilder.DefineLiteral('TokenSandBoxInert', [uint32] 0x0000000f)
+            [void]$EnumBuilder.DefineLiteral('TokenAuditPolicy', [uint32] 0x00000010)
+            [void]$EnumBuilder.DefineLiteral('TokenOrigin', [uint32] 0x00000011)
             [void]$EnumBuilder.CreateType()
             #endregion TOKEN_INFORMATION_CLASS
-            #region ProcessAccessFlags 
+            #region ProcessAccessFlags
             $EnumBuilder = $ModuleBuilder.DefineEnum('ProcessAccessFlags', 'Public', [uint32])
             [void]$EnumBuilder.DefineLiteral('All', [uint32] 0x001F0FFF)
             [void]$EnumBuilder.DefineLiteral('Terminate', [uint32] 0x00000001)
@@ -256,8 +258,8 @@
             [void]$STRUCT_TypeBuilder.DefineField('MaximumLength', [uint16], 'Public')
             $ctor = [System.Runtime.InteropServices.MarshalAsAttribute].GetConstructor(@([System.Runtime.InteropServices.UnmanagedType]))
             $CustomAttribute = [System.Runtime.InteropServices.UnmanagedType]::LPWStr
-            $CustomAttributeBuilder = New-Object System.Reflection.Emit.CustomAttributeBuilder -ArgumentList $ctor, $CustomAttribute 
-            $BufferField = $STRUCT_TypeBuilder.DefineField('Buffer', [string], @('Public','HasFieldMarshal'))
+            $CustomAttributeBuilder = New-Object System.Reflection.Emit.CustomAttributeBuilder -ArgumentList $ctor, $CustomAttribute
+            $BufferField = $STRUCT_TypeBuilder.DefineField('Buffer', [string], @('Public', 'HasFieldMarshal'))
             $BufferField.SetCustomAttribute($CustomAttributeBuilder)
             [void]$STRUCT_TypeBuilder.CreateType()
             #endregion LSA_UNICODE_STRING
@@ -312,7 +314,7 @@
                 'AdjustTokenPrivileges', #Method Name
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
-                [Type[]] @([intptr], [bool], [TokPriv1Luid].MakeByRefType() ,[int], [intptr], [intptr]) #Method Parameters
+                [Type[]] @([intptr], [bool], [TokPriv1Luid].MakeByRefType() , [int], [intptr], [intptr]) #Method Parameters
             )
 
             $DllImportConstructor = [Runtime.InteropServices.DllImportAttribute].GetConstructor(@([String]))
@@ -373,8 +375,8 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [intptr], 
-                    [int], 
+                    [intptr],
+                    [int],
                     [intptr].MakeByRefType()
                 ) #Method Parameters
             )
@@ -437,8 +439,8 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [string],              #lpSystemName
-                    [string],              #lpName
+                    [string], #lpSystemName
+                    [string], #lpName
                     [long].MakeByRefType() #lpLuid
                 ) #Method Parameters
             )
@@ -469,8 +471,8 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [uint32], #Method Return Type
                 [Type[]] @(
-                    [intptr],   #PolicyHandle
-                    [intptr],   #AccountSID
+                    [intptr], #PolicyHandle
+                    [intptr], #AccountSID
                     [LSA_UNICODE_STRING[]], #UserRights
                     [int]    #CountofRights
                 ) #Method Parameters
@@ -495,7 +497,7 @@
                 $DllImportConstructor,
                 @('advapi32.dll'),
                 $FieldArray,
-                $FieldValueArray    
+                $FieldValueArray
             )
 
             $PInvokeMethod.SetCustomAttribute($CustomAttribute)
@@ -506,9 +508,9 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [uint32], #Method Return Type
                 [Type[]] @(
-                    [intptr],               #PolicyHandle
-                    [intptr],               #AccountSID
-                    [bool],                 #AllRights
+                    [intptr], #PolicyHandle
+                    [intptr], #AccountSID
+                    [bool], #AllRights
                     [LSA_UNICODE_STRING[]], #UserRights
                     [int]                   #CountofRights
                 ) #Method Parameters
@@ -533,7 +535,7 @@
                 $DllImportConstructor,
                 @('advapi32.dll'),
                 $FieldArray,
-                $FieldValueArray    
+                $FieldValueArray
             )
 
             $PInvokeMethod.SetCustomAttribute($CustomAttribute)
@@ -683,7 +685,7 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [string],                #StringSID
+                    [string], #StringSID
                     [intptr].MakeByRefType() #ptrSID
                 ) #Method Parameters
             )
@@ -718,8 +720,8 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [uint32], #Method Return Type
                 [Type[]] @(
-                    [intptr], 
-                    [LSA_UNICODE_STRING[]], 
+                    [intptr],
+                    [LSA_UNICODE_STRING[]],
                     [intptr].MakeByRefType(),
                     [int].MakeByRefType()
                 ) #Method Parameters
@@ -753,7 +755,7 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [intptr],                #pSID
+                    [intptr], #pSID
                     [string].MakeByRefType() #sSID
                 ) #Method Parameters
             )
@@ -856,10 +858,10 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [intptr],                  #TokenHandle
+                    [intptr], #TokenHandle
                     [TOKEN_INFORMATION_CLASS], #TokenInformationClass
-                    [intptr],                  #TokenInformation
-                    [uint32],                  #TokenInformationLength
+                    [intptr], #TokenInformation
+                    [uint32], #TokenInformationLength
                     [uint32].MakeByRefType()   #ReturnLength
                 ) #Method Parameters
             )
@@ -894,8 +896,8 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [string],                    #lpSystemName
-                    [intptr],                    #lpLUID
+                    [string], #lpSystemName
+                    [intptr], #lpLUID
                     [System.Text.StringBuilder], #lpName
                     [int].MakeByRefType()        #TokenInformationLength
                 ) #Method Parameters
@@ -969,7 +971,7 @@
                 [intptr], #Method Return Type
                 [Type[]] @(
                     [ProcessAccessFlags], #ProcessAccess
-                    [bool],               #InheritHandle
+                    [bool], #InheritHandle
                     [int]                 #processID
                 ) #Method Parameters
             )
@@ -1038,10 +1040,10 @@
                 [Reflection.MethodAttributes] 'PrivateScope, Public, Static, HideBySig, PinvokeImpl', #Method Attributes
                 [bool], #Method Return Type
                 [Type[]] @(
-                    [string],                    #SystemName
-                    [string],                    #PrivilegeName
+                    [string], #SystemName
+                    [string], #PrivilegeName
                     [System.Text.StringBuilder], #DisplayName
-                    [uint32].MakeByRefType(),    #cbDisplayName
+                    [uint32].MakeByRefType(), #cbDisplayName
                     [uint32].MakeByRefType()     #LanguageID
                 ) #Method Parameters
             )
@@ -1083,45 +1085,38 @@
                 ##Source function from Matt Graeber and Joe Balek
                 [cmdletbinding()]
                 Param(
-                [Parameter(Position = 0, Mandatory = $true)]
-                [Int64]
-                $Value1,
-                    
-                [Parameter(Position = 1, Mandatory = $true)]
-                [Int64]
-                $Value2
+                    [Parameter(Position = 0, Mandatory = $true)]
+                    [Int64]
+                    $Value1,
+
+                    [Parameter(Position = 1, Mandatory = $true)]
+                    [Int64]
+                    $Value2
                 )
-                    
+
                 [Byte[]]$Value1Bytes = [BitConverter]::GetBytes($Value1)
                 [Byte[]]$Value2Bytes = [BitConverter]::GetBytes($Value2)
                 [Byte[]]$FinalBytes = [BitConverter]::GetBytes([UInt64]0)
 
-                if ($Value1Bytes.Count -eq $Value2Bytes.Count)
-                {
+                if ($Value1Bytes.Count -eq $Value2Bytes.Count) {
                     $CarryOver = 0
-                    for ($i = 0; $i -lt $Value1Bytes.Count; $i++)
-                    {
+                    for ($i = 0; $i -lt $Value1Bytes.Count; $i++) {
                         #Add bytes
                         [UInt16]$Sum = $Value1Bytes[$i] + $Value2Bytes[$i] + $CarryOver
 
                         $FinalBytes[$i] = $Sum -band 0x00FF
-                            
-                        if (($Sum -band 0xFF00) -eq 0x100)
-                        {
+
+                        if (($Sum -band 0xFF00) -eq 0x100) {
                             $CarryOver = 1
-                        }
-                        else
-                        {
+                        } else {
                             $CarryOver = 0
                         }
                         Write-Verbose "Carryover: $($CarryOver)"
                     }
-                }
-                else
-                {
+                } else {
                     Throw "Cannot add bytearrays of different sizes"
                 }
-                    
+
                 return [BitConverter]::ToInt64($FinalBytes, 0)
             }
             Function GetPrivilegeDisplayName {
@@ -1130,7 +1125,7 @@
                 [uint32]$LanguageId = 0
                 $StringBuilder = New-Object System.Text.StringBuilder
                 [void]$StringBuilder.EnsureCapacity($DisplayName)
-                $return=[PoshPrivilege]::LookupPrivilegeDisplayName(
+                $return = [PoshPrivilege]::LookupPrivilegeDisplayName(
                     $env:COMPUTERNAME,
                     $Privilege,
                     $StringBuilder,
@@ -1145,21 +1140,21 @@
 
             #region scriptpart - query users priviledges
             $Process = Get-Process -Id $PID
-            $PROCESS_QUERY_INFORMATION = [ProcessAccessFlags]::QueryInformation            
+            $PROCESS_QUERY_INFORMATION = [ProcessAccessFlags]::QueryInformation
             $TOKEN_ALL_ACCESS = [System.Security.Principal.TokenAccessLevels]::AllAccess
             $CurrentUserPrivileges = @()
-            
+
             $hProcess = [PoShPrivilege]::OpenProcess(
-                $PROCESS_QUERY_INFORMATION, 
-                $True, 
+                $PROCESS_QUERY_INFORMATION,
+                $True,
                 $Process.Id
             )
             Write-Debug "ProcessHandle: $($hProcess)"
-            
+
             $hProcessToken = [intptr]::Zero
             [void][PoShPrivilege]::OpenProcessToken(
-                $hProcess, 
-                $TOKEN_ALL_ACCESS, 
+                $hProcess,
+                $TOKEN_ALL_ACCESS,
                 [ref]$hProcessToken
             )
             Write-Debug "ProcessToken: $($hProcessToken)"
@@ -1178,19 +1173,19 @@
 
             $TokenPrivileges = [System.Runtime.InteropServices.Marshal]::PtrToStructure($TokenPrivPtr, [Type][TOKEN_PRIVILEGES])
             [IntPtr]$PrivilegesBasePtr = [IntPtr](AddSignedIntAsUnsigned -Value1 $TokenPrivPtr -Value2 ([System.Runtime.InteropServices.Marshal]::OffsetOf(
-                [Type][TOKEN_PRIVILEGES], "Privileges"
-            )))
+                        [Type][TOKEN_PRIVILEGES], "Privileges"
+                    )))
             $LuidAndAttributeSize = [System.Runtime.InteropServices.Marshal]::SizeOf([Type][LUID_AND_ATTRIBUTES])
-            for ($i=0; $i -lt $TokenPrivileges.PrivilegeCount; $i++) {
+            for ($i = 0; $i -lt $TokenPrivileges.PrivilegeCount; $i++) {
                 $LuidAndAttributePtr = [IntPtr](AddSignedIntAsUnsigned -Value1 $PrivilegesBasePtr -Value2 ($LuidAndAttributeSize * $i))
                 $LuidAndAttribute = [System.Runtime.InteropServices.Marshal]::PtrToStructure($LuidAndAttributePtr, [Type][LUID_AND_ATTRIBUTES])
                 [UInt32]$PrivilegeNameSize = 60
                 $PrivilegeNamePtr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($PrivilegeNameSize)
                 $PLuid = $LuidAndAttributePtr
                 [void][PoShPrivilege]::LookupPrivilegeNameW(
-                    [IntPtr]::Zero, 
-                    $PLuid, 
-                    $PrivilegeNamePtr, 
+                    [IntPtr]::Zero,
+                    $PLuid,
+                    $PrivilegeNamePtr,
                     [Ref]$PrivilegeNameSize
                 )
                 $PrivilegeName = [System.Runtime.InteropServices.Marshal]::PtrToStringUni($PrivilegeNamePtr)
@@ -1201,11 +1196,11 @@
                 $Object = [pscustomobject]@{
                     #Computername = $env:COMPUTERNAME
                     #Account = "{0}\{1}" -f ($env:USERDOMAIN, $env:USERNAME)
-                    Privilege = $PrivilegeName
+                    Privilege   = $PrivilegeName
                     Description = GetPrivilegeDisplayName -Privilege $PrivilegeName
-                    Enabled = $Enabled
+                    Enabled     = $Enabled
                 }
-                $Object.pstypenames.insert(0,'PSPrivilege.CurrentUserPrivilege')
+                $Object.pstypenames.insert(0, 'PSPrivilege.CurrentUserPrivilege')
                 $CurrentUserPrivileges += $Object
             }
             #endregion scriptpart - query users priviledges
@@ -1214,62 +1209,62 @@
 
     $OutputHash = [ordered]@{}
     switch ($PsCmdlet.ParameterSetName) {
-        'User' { 
-            $OutputHash.Name                     = $CurrentUserAccount.Name
-            $OutputHash.NetbiosLogon             = $CurrentUserIdentity.Name
-            $OutputHash.DisplayName              = $CurrentUserAccount.DisplayName
-            $OutputHash.SamAccountName           = $CurrentUserAccount.SamAccountName
-            $OutputHash.UserPrincipalName        = $CurrentUserAccount.UserPrincipalName
-            $OutputHash.SID                      = $CurrentUserAccount.Sid
-            $OutputHash.Guid                     = $CurrentUserAccount.Guid
-            $OutputHash.DistinguishedName        = $CurrentUserAccount.DistinguishedName
-            $OutputHash.AuthenticationType       = $CurrentUserIdentity.AuthenticationType
-            $OutputHash.ImpersonationLevel       = $CurrentUserIdentity.ImpersonationLevel
-            $OutputHash.IsAuthenticated          = $CurrentUserIdentity.IsAuthenticated
-            $OutputHash.IsGuest                  = $CurrentUserIdentity.IsGuest
-            $OutputHash.IsSystem                 = $CurrentUserIdentity.IsSystem
-            $OutputHash.IsAnonymous              = $CurrentUserIdentity.IsAnonymous
-            $OutputHash.Owner                    = $CurrentUserIdentity.Owner.Translate([System.Security.Principal.NTAccount]).Value
-            $OutputHash.Token                    = $CurrentUserIdentity.Token
-            $OutputHash.GivenName                = $CurrentUserAccount.GivenName
-            $OutputHash.MiddleName               = $CurrentUserAccount.MiddleName
-            $OutputHash.Surname                  = $CurrentUserAccount.Surname
-            $OutputHash.EmailAddress             = $CurrentUserAccount.EmailAddress
-            $OutputHash.VoiceTelephoneNumber     = $CurrentUserAccount.VoiceTelephoneNumber
-            $OutputHash.EmployeeId               = $CurrentUserAccount.EmployeeId
-            $OutputHash.Enabled                  = $CurrentUserAccount.Enabled
-            $OutputHash.AccountLockoutTime       = $CurrentUserAccount.AccountLockoutTime
-            $OutputHash.LastLogon                = $CurrentUserAccount.LastLogon
-            $OutputHash.PermittedWorkstations    = $CurrentUserAccount.PermittedWorkstations
-            $OutputHash.PermittedLogonTimes      = $CurrentUserAccount.PermittedLogonTimes
-            $OutputHash.AccountExpirationDate    = $CurrentUserAccount.AccountExpirationDate
-            $OutputHash.SmartcardLogonRequired   = $CurrentUserAccount.SmartcardLogonRequired
-            $OutputHash.DelegationPermitted      = $CurrentUserAccount.DelegationPermitted
-            $OutputHash.BadLogonCount            = $CurrentUserAccount.BadLogonCount
-            $OutputHash.HomeDirectory            = $CurrentUserAccount.HomeDirectory
-            $OutputHash.HomeDrive                = $CurrentUserAccount.HomeDrive
-            $OutputHash.ScriptPath               = $CurrentUserAccount.ScriptPath
-            $OutputHash.LastPasswordSet          = $CurrentUserAccount.LastPasswordSet
-            $OutputHash.LastBadPasswordAttempt   = $CurrentUserAccount.LastBadPasswordAttempt
-            $OutputHash.PasswordNotRequired      = $CurrentUserAccount.PasswordNotRequired
-            $OutputHash.PasswordNeverExpires     = $CurrentUserAccount.PasswordNeverExpires
+        'User' {
+            $OutputHash.Name = $CurrentUserAccount.Name
+            $OutputHash.NetbiosLogon = $CurrentUserIdentity.Name
+            $OutputHash.DisplayName = $CurrentUserAccount.DisplayName
+            $OutputHash.SamAccountName = $CurrentUserAccount.SamAccountName
+            $OutputHash.UserPrincipalName = $CurrentUserAccount.UserPrincipalName
+            $OutputHash.SID = $CurrentUserAccount.Sid
+            $OutputHash.Guid = $CurrentUserAccount.Guid
+            $OutputHash.DistinguishedName = $CurrentUserAccount.DistinguishedName
+            $OutputHash.AuthenticationType = $CurrentUserIdentity.AuthenticationType
+            $OutputHash.ImpersonationLevel = $CurrentUserIdentity.ImpersonationLevel
+            $OutputHash.IsAuthenticated = $CurrentUserIdentity.IsAuthenticated
+            $OutputHash.IsGuest = $CurrentUserIdentity.IsGuest
+            $OutputHash.IsSystem = $CurrentUserIdentity.IsSystem
+            $OutputHash.IsAnonymous = $CurrentUserIdentity.IsAnonymous
+            $OutputHash.Owner = $CurrentUserIdentity.Owner.Translate([System.Security.Principal.NTAccount]).Value
+            $OutputHash.Token = $CurrentUserIdentity.Token
+            $OutputHash.GivenName = $CurrentUserAccount.GivenName
+            $OutputHash.MiddleName = $CurrentUserAccount.MiddleName
+            $OutputHash.Surname = $CurrentUserAccount.Surname
+            $OutputHash.EmailAddress = $CurrentUserAccount.EmailAddress
+            $OutputHash.VoiceTelephoneNumber = $CurrentUserAccount.VoiceTelephoneNumber
+            $OutputHash.EmployeeId = $CurrentUserAccount.EmployeeId
+            $OutputHash.Enabled = $CurrentUserAccount.Enabled
+            $OutputHash.AccountLockoutTime = $CurrentUserAccount.AccountLockoutTime
+            $OutputHash.LastLogon = $CurrentUserAccount.LastLogon
+            $OutputHash.PermittedWorkstations = $CurrentUserAccount.PermittedWorkstations
+            $OutputHash.PermittedLogonTimes = $CurrentUserAccount.PermittedLogonTimes
+            $OutputHash.AccountExpirationDate = $CurrentUserAccount.AccountExpirationDate
+            $OutputHash.SmartcardLogonRequired = $CurrentUserAccount.SmartcardLogonRequired
+            $OutputHash.DelegationPermitted = $CurrentUserAccount.DelegationPermitted
+            $OutputHash.BadLogonCount = $CurrentUserAccount.BadLogonCount
+            $OutputHash.HomeDirectory = $CurrentUserAccount.HomeDirectory
+            $OutputHash.HomeDrive = $CurrentUserAccount.HomeDrive
+            $OutputHash.ScriptPath = $CurrentUserAccount.ScriptPath
+            $OutputHash.LastPasswordSet = $CurrentUserAccount.LastPasswordSet
+            $OutputHash.LastBadPasswordAttempt = $CurrentUserAccount.LastBadPasswordAttempt
+            $OutputHash.PasswordNotRequired = $CurrentUserAccount.PasswordNotRequired
+            $OutputHash.PasswordNeverExpires = $CurrentUserAccount.PasswordNeverExpires
             $OutputHash.UserCannotChangePassword = $CurrentUserAccount.UserCannotChangePassword
             $OutputHash.AllowReversiblePasswordEncryption = $CurrentUserAccount.AllowReversiblePasswordEncryption
-            $OutputHash.Certificates             = $CurrentUserAccount.Certificates
-            $OutputHash.Context                  = $CurrentUserAccount.Context
-            $OutputHash.ContextType              = $CurrentUserAccount.ContextType
-            $OutputHash.Description              = $CurrentUserAccount.Description
-            $OutputHash.StructuralObjectClass    = $CurrentUserAccount.StructuralObjectClass
+            $OutputHash.Certificates = $CurrentUserAccount.Certificates
+            $OutputHash.Context = $CurrentUserAccount.Context
+            $OutputHash.ContextType = $CurrentUserAccount.ContextType
+            $OutputHash.Description = $CurrentUserAccount.Description
+            $OutputHash.StructuralObjectClass = $CurrentUserAccount.StructuralObjectClass
 
             Write-Output (New-Object -TypeName psobject -Property $OutputHash)
         }
 
         'Groups' {
-            $TokenLocalName = $CurrentUserIdentity.Groups.samaccountname 
-            $TokenADName = $CurrentUserAccount.GroupsAuthorization.samaccountname 
-            
+            $TokenLocalName = $CurrentUserIdentity.Groups.samaccountname
+            $TokenADName = $CurrentUserAccount.GroupsAuthorization.samaccountname
+
             $compareResults = Compare-Object -ReferenceObject $TokenLocalName -DifferenceObject $TokenADName -IncludeEqual
-            foreach($compareResult in $compareResults) { 
+            foreach ($compareResult in $compareResults) {
                 switch ($compareResult.SideIndicator) {
                     '==' {
                         $Group = $CurrentUserIdentity.Groups | Where-Object -Property samaccountname -like $compareResult.InputObject
@@ -1286,7 +1281,7 @@
                         Add-Member -InputObject $Group -MemberType NoteProperty -Force -Name InfoSource -Value "LocalToken"
                     }
                 }
-                Add-Member -InputObject $Group -MemberType NoteProperty -Force -Name User -Value (.{if($CurrentUserIdentity.Name -match '\\') { $CurrentUserIdentity.Name.Split('\')[1] } else { $CurrentUserIdentity.Name }})
+                Add-Member -InputObject $Group -MemberType NoteProperty -Force -Name User -Value (.{ if ($CurrentUserIdentity.Name -match '\\') { $CurrentUserIdentity.Name.Split('\')[1] } else { $CurrentUserIdentity.Name } })
                 Add-Member -InputObject $Group -MemberType NoteProperty -Force -Name UserNetbiosLogon -Value $CurrentUserIdentity.Name
                 Add-Member -InputObject $Group -MemberType NoteProperty -Force -Name UserSID -Value $CurrentUserIdentity.User
                 Write-Output $Group
@@ -1295,7 +1290,7 @@
 
         'Privileges' {
             foreach ($Item in $CurrentUserPrivileges) {
-                Add-Member -InputObject $Item -MemberType NoteProperty -Force -Name Name -Value (.{if($CurrentUserIdentity.Name -match '\\') { $CurrentUserIdentity.Name.Split('\')[1] } else { $CurrentUserIdentity.Name }})
+                Add-Member -InputObject $Item -MemberType NoteProperty -Force -Name Name -Value (.{ if ($CurrentUserIdentity.Name -match '\\') { $CurrentUserIdentity.Name.Split('\')[1] } else { $CurrentUserIdentity.Name } })
                 Add-Member -InputObject $Item -MemberType NoteProperty -Force -Name NetbiosLogon -Value $CurrentUserIdentity.Name
                 Add-Member -InputObject $Item -MemberType NoteProperty -Force -Name SID -Value $CurrentUserIdentity.User
                 Write-Output $Item
@@ -1303,60 +1298,60 @@
         }
 
         'All' {
-            $OutputHash.Name                     = $CurrentUserAccount.Name
-            $OutputHash.NetbiosLogon             = $CurrentUserIdentity.Name
-            $OutputHash.DisplayName              = $CurrentUserAccount.DisplayName
-            $OutputHash.SamAccountName           = $CurrentUserAccount.SamAccountName
-            $OutputHash.UserPrincipalName        = $CurrentUserAccount.UserPrincipalName
-            $OutputHash.Sid                      = $CurrentUserAccount.Sid
-            $OutputHash.Guid                     = $CurrentUserAccount.Guid
-            $OutputHash.DistinguishedName        = $CurrentUserAccount.DistinguishedName
-            $OutputHash.AuthenticationType       = $CurrentUserIdentity.AuthenticationType
-            $OutputHash.ImpersonationLevel       = $CurrentUserIdentity.ImpersonationLevel
-            $OutputHash.IsAuthenticated          = $CurrentUserIdentity.IsAuthenticated
-            $OutputHash.IsGuest                  = $CurrentUserIdentity.IsGuest
-            $OutputHash.IsSystem                 = $CurrentUserIdentity.IsSystem
-            $OutputHash.IsAnonymous              = $CurrentUserIdentity.IsAnonymous
-            $OutputHash.Owner                    = $CurrentUserIdentity.Owner.Translate([System.Security.Principal.NTAccount]).Value
-            $OutputHash.Token                    = $CurrentUserIdentity.Token
-            $OutputHash.GivenName                = $CurrentUserAccount.GivenName
-            $OutputHash.MiddleName               = $CurrentUserAccount.MiddleName
-            $OutputHash.Surname                  = $CurrentUserAccount.Surname
-            $OutputHash.EmailAddress             = $CurrentUserAccount.EmailAddress
-            $OutputHash.VoiceTelephoneNumber     = $CurrentUserAccount.VoiceTelephoneNumber
-            $OutputHash.EmployeeId               = $CurrentUserAccount.EmployeeId
-            $OutputHash.Enabled                  = $CurrentUserAccount.Enabled
-            $OutputHash.AccountLockoutTime       = $CurrentUserAccount.AccountLockoutTime
-            $OutputHash.LastLogon                = $CurrentUserAccount.LastLogon
-            $OutputHash.PermittedWorkstations    = $CurrentUserAccount.PermittedWorkstations
-            $OutputHash.PermittedLogonTimes      = $CurrentUserAccount.PermittedLogonTimes
-            $OutputHash.AccountExpirationDate    = $CurrentUserAccount.AccountExpirationDate
-            $OutputHash.SmartcardLogonRequired   = $CurrentUserAccount.SmartcardLogonRequired
-            $OutputHash.DelegationPermitted      = $CurrentUserAccount.DelegationPermitted
-            $OutputHash.BadLogonCount            = $CurrentUserAccount.BadLogonCount
-            $OutputHash.HomeDirectory            = $CurrentUserAccount.HomeDirectory
-            $OutputHash.HomeDrive                = $CurrentUserAccount.HomeDrive
-            $OutputHash.ScriptPath               = $CurrentUserAccount.ScriptPath
-            $OutputHash.LastPasswordSet          = $CurrentUserAccount.LastPasswordSet
-            $OutputHash.LastBadPasswordAttempt   = $CurrentUserAccount.LastBadPasswordAttempt
-            $OutputHash.PasswordNotRequired      = $CurrentUserAccount.PasswordNotRequired
-            $OutputHash.PasswordNeverExpires     = $CurrentUserAccount.PasswordNeverExpires
+            $OutputHash.Name = $CurrentUserAccount.Name
+            $OutputHash.NetbiosLogon = $CurrentUserIdentity.Name
+            $OutputHash.DisplayName = $CurrentUserAccount.DisplayName
+            $OutputHash.SamAccountName = $CurrentUserAccount.SamAccountName
+            $OutputHash.UserPrincipalName = $CurrentUserAccount.UserPrincipalName
+            $OutputHash.Sid = $CurrentUserAccount.Sid
+            $OutputHash.Guid = $CurrentUserAccount.Guid
+            $OutputHash.DistinguishedName = $CurrentUserAccount.DistinguishedName
+            $OutputHash.AuthenticationType = $CurrentUserIdentity.AuthenticationType
+            $OutputHash.ImpersonationLevel = $CurrentUserIdentity.ImpersonationLevel
+            $OutputHash.IsAuthenticated = $CurrentUserIdentity.IsAuthenticated
+            $OutputHash.IsGuest = $CurrentUserIdentity.IsGuest
+            $OutputHash.IsSystem = $CurrentUserIdentity.IsSystem
+            $OutputHash.IsAnonymous = $CurrentUserIdentity.IsAnonymous
+            $OutputHash.Owner = $CurrentUserIdentity.Owner.Translate([System.Security.Principal.NTAccount]).Value
+            $OutputHash.Token = $CurrentUserIdentity.Token
+            $OutputHash.GivenName = $CurrentUserAccount.GivenName
+            $OutputHash.MiddleName = $CurrentUserAccount.MiddleName
+            $OutputHash.Surname = $CurrentUserAccount.Surname
+            $OutputHash.EmailAddress = $CurrentUserAccount.EmailAddress
+            $OutputHash.VoiceTelephoneNumber = $CurrentUserAccount.VoiceTelephoneNumber
+            $OutputHash.EmployeeId = $CurrentUserAccount.EmployeeId
+            $OutputHash.Enabled = $CurrentUserAccount.Enabled
+            $OutputHash.AccountLockoutTime = $CurrentUserAccount.AccountLockoutTime
+            $OutputHash.LastLogon = $CurrentUserAccount.LastLogon
+            $OutputHash.PermittedWorkstations = $CurrentUserAccount.PermittedWorkstations
+            $OutputHash.PermittedLogonTimes = $CurrentUserAccount.PermittedLogonTimes
+            $OutputHash.AccountExpirationDate = $CurrentUserAccount.AccountExpirationDate
+            $OutputHash.SmartcardLogonRequired = $CurrentUserAccount.SmartcardLogonRequired
+            $OutputHash.DelegationPermitted = $CurrentUserAccount.DelegationPermitted
+            $OutputHash.BadLogonCount = $CurrentUserAccount.BadLogonCount
+            $OutputHash.HomeDirectory = $CurrentUserAccount.HomeDirectory
+            $OutputHash.HomeDrive = $CurrentUserAccount.HomeDrive
+            $OutputHash.ScriptPath = $CurrentUserAccount.ScriptPath
+            $OutputHash.LastPasswordSet = $CurrentUserAccount.LastPasswordSet
+            $OutputHash.LastBadPasswordAttempt = $CurrentUserAccount.LastBadPasswordAttempt
+            $OutputHash.PasswordNotRequired = $CurrentUserAccount.PasswordNotRequired
+            $OutputHash.PasswordNeverExpires = $CurrentUserAccount.PasswordNeverExpires
             $OutputHash.UserCannotChangePassword = $CurrentUserAccount.UserCannotChangePassword
             $OutputHash.AllowReversiblePasswordEncryption = $CurrentUserAccount.AllowReversiblePasswordEncryption
-            $OutputHash.Certificates             = $CurrentUserAccount.Certificates
-            $OutputHash.Context                  = $CurrentUserAccount.Context
-            $OutputHash.ContextType              = $CurrentUserAccount.ContextType
-            $OutputHash.Description              = $CurrentUserAccount.Description
-            $OutputHash.StructuralObjectClass    = $CurrentUserAccount.StructuralObjectClass
-            
-            $OutputHash.GroupsLocalToken         = $CurrentUserIdentity.Groups
-            $OutputHash.GroupsADMemberOf         = $CurrentUserAccount.Groups
-            $OutputHash.GroupsADAuthorization    = $CurrentUserAccount.GroupsAuthorization
+            $OutputHash.Certificates = $CurrentUserAccount.Certificates
+            $OutputHash.Context = $CurrentUserAccount.Context
+            $OutputHash.ContextType = $CurrentUserAccount.ContextType
+            $OutputHash.Description = $CurrentUserAccount.Description
+            $OutputHash.StructuralObjectClass = $CurrentUserAccount.StructuralObjectClass
 
-            $OutputHash.Privileges               = $CurrentUserPrivileges
-            
+            $OutputHash.GroupsLocalToken = $CurrentUserIdentity.Groups
+            $OutputHash.GroupsADMemberOf = $CurrentUserAccount.Groups
+            $OutputHash.GroupsADAuthorization = $CurrentUserAccount.GroupsAuthorization
+
+            $OutputHash.Privileges = $CurrentUserPrivileges
+
             Write-Output [psobject]($OutputHash)
         }
     }
-    
+
 }

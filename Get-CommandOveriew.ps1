@@ -57,19 +57,24 @@
             parameterSetName = 'DefaultOrder',
             Mandatory = $true,
             ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0
         )]
         [Parameter(
             parameterSetName = 'OrderByResolvedCommand',
             Mandatory = $true,
             ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0
         )]
         [Alias('Name')]
         [string[]]
         $ModuleName,
 
-        [Parameter(parameterSetName = 'DefaultOrder')]
+        [Parameter(
+            parameterSetName = 'DefaultOrder',
+            Position = 1
+        )]
         [alias('Prefix')]
         [string[]]
         $CmdPrefix,
@@ -92,15 +97,15 @@
         foreach ($moduleNameItem in $ModuleName) {
 
             Write-Verbose "Searching for module '$($moduleNameItem)' on the system"
-            $module = Get-InstalledModule -Name $moduleNameItem -ErrorAction Ignore
+            $module = Get-Module -Name $moduleNameItem -ErrorAction Ignore -ListAvailable | Select-Object -First 1
             if (-not $module) {
                 Write-Error "Module $($moduleNameItem) not found"
                 continue
             }
 
-            Write-Verbose "Gettings commands from module '$($moduleNameItem)'"
-            $moduleCommands = Get-Command -Module $moduleNameItem -ErrorAction Ignore
-            Write-Verbose "Found $($moduleCommands.count) in module '$($moduleNameItem)'"
+            Write-Verbose "Gettings commands from module '$($module.Name)'"
+            $moduleCommands = Get-Command -Module $module.Name -ErrorAction Ignore
+            Write-Verbose "Found $($moduleCommands.count) in module '$($module.Name)'"
 
             foreach ($command in $moduleCommands) {
                 Write-Verbose "Processing command: $($command.Name)"

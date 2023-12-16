@@ -49,7 +49,7 @@
             )
 
             $connectionParameter = @{}
-            if($computer -ne $env:computername) {
+            if ($computer -ne $env:computername) {
                 $connectionParameter.Add("ComputerName", $computer)
                 if ($Credential) { $connectionParameter.Add("Credential", $Credential) }
             }
@@ -148,29 +148,29 @@
             $connectionParameter = @{ ComputerName = $computer }
             if ($Credential) { $parameter.Add("Credential", $Credential) }
 
-            if($computer -like $env:computername -or $computer -like "localhost" -or $computer -like ".") {
+            if ($computer -like $env:computername -or $computer -like "localhost" -or $computer -like ".") {
 
                 $result = . $queryScriptBlock
 
             } else {
 
-                if(-not (Resolve-DnsName -Name $computer)) {
+                if (-not (Resolve-DnsName -Name $computer)) {
                     Write-Error "Unable to resolve '$computer'"
                     continue
                 }
 
-                if(Test-NetConnection -ComputerName $computer -Port 5985 -InformationLevel Quiet -ErrorAction SilentlyContinue) {
+                if (Test-NetConnection -ComputerName $computer -Port 5985 -InformationLevel Quiet -ErrorAction SilentlyContinue) {
                     # WSMAN/PowerShellRemoting
                     $result = Invoke-Command @connectionParameter -ScriptBlock $queryScriptBlock
                 } else {
-                    if(Test-NetConnection -ComputerName $computer -Port 135 -InformationLevel Quiet -ErrorAction SilentlyContinue) {
+                    if (Test-NetConnection -ComputerName $computer -Port 135 -InformationLevel Quiet -ErrorAction SilentlyContinue) {
                         # use RPC/WMI
                         $result = . $queryScriptBlock
                     }
                 }
             }
 
-            if(-not $result) {
+            if (-not $result) {
                 Write-Warning "Unable to connect to '$computer'"
                 $result = [PSCustomObject]@{
                     ComputerName                = $computer

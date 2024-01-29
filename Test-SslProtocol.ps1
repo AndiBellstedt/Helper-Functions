@@ -78,7 +78,7 @@
             ValueFromPipelineByPropertyName = $true,
             ValueFromPipeline = $true
         )]
-        [Alias("CN", "Server", "IPAddress", "IP", "Host", "Computer", "ComputerName", "ServerName")]
+        [Alias("CN", "Server", "IPAddress", "IP", "Host", "Computer", "ServerName")]
         [string[]]
         $ComputerName,
 
